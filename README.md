@@ -26,7 +26,7 @@ Alldevs/Daysback/7:
 
 Paiddevs/Month/11
 
-![Paiddevs/Month/11](AC%20Hired%20Developers%20Activity%20For%20November%20-%202021-12-11.png)
+![Paiddevs/Month/11](AC%20Selected%20Developers%20Activity%20For%20November%20-%202021-12-11.png)
 
 Triage/Year/2021
 
