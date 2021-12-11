@@ -62,7 +62,7 @@ def convert_data(data, targets):
 
 def generate_stackbar(data, targets, datemode, datevar):
     titles = {'triage': 'Triaging Team', 'testers': 'Testing Team',
-              'paiddevs': 'Hired Developers', 'alldevs': 'All Developers'}
+              'paiddevs': 'Selected Developers', 'alldevs': 'All Developers'}
     data = convert_data(data, targets)
     df = pd.DataFrame(data)
     df.set_index('Name', inplace=True)
