@@ -25,8 +25,7 @@ def get_AC_team(git, targets='triage'):
     # AC ID = 20147732, Bug Triaging Team ID = 4914022, Senior BT = 4916549
     # testers = 2167099, devs = 2059572
     # Multiple teams can be merged and treated as one unit, i.e. triage/senior triage
-    # Can also manually specify team members, as for paiddevs team, where no
-    # formal team in Github exists.
+    # Can also manually specify team members, where no formal team in Github exists.
     teamnames = []
     org = git.get_organization('azerothcore')
     id_dict = {'triage': [4914022, 4916549], 'alldevs': [2059572],
@@ -51,7 +50,7 @@ def convert_data(data, targets):
 
     if targets == 'triage':
         headings = ['AC Issues Created', 'CC Issues Involved', 'PRs Created'] # 'AC Other',
-    elif targets in ['paiddevs', 'alldevs']:
+    elif targets in ['selectdevs', 'alldevs']:
         headings = ['PRs Made', 'PRs Reviewed']
     elif targets == 'testers':
         headings = ['PRs Involved', 'PRs Made']
@@ -62,7 +61,7 @@ def convert_data(data, targets):
 
 def generate_stackbar(data, targets, datemode, datevar):
     titles = {'triage': 'Triaging Team', 'testers': 'Testing Team',
-              'paiddevs': 'Selected Developers', 'alldevs': 'All Developers'}
+              'selectdevs': 'Selected Developers', 'alldevs': 'All Developers'}
     data = convert_data(data, targets)
     df = pd.DataFrame(data)
     df.set_index('Name', inplace=True)
@@ -76,21 +75,24 @@ def generate_stackbar(data, targets, datemode, datevar):
     font_color = 'black'
     hfont = {'fontname':'Calibri'}
 
+    figsize_y = max(len(df) * 0.5, 7.5) # dynamic resize
     ax = df.plot(kind='barh', stacked=True, edgecolor='black', linewidth=1,
-    width=0.75, figsize=(12, 7.5), color=[u'#1f77b4', u'#2ca02c', u'#d62728'])
+    width=0.75, figsize=(12, figsize_y), color=[u'#1f77b4', u'#2ca02c', u'#d62728']) #
 
     for label in ax.get_xticklabels() + ax.get_yticklabels():
-        label.set_fontsize(16)
+        label.set_fontsize(14) #16
         plt.xticks(color=font_color, **hfont)
         plt.yticks(color=font_color, **hfont)
 
     for p in ax.patches:
         width, height = p.get_width(), p.get_height()
         x, y = p.get_xy()
+
+        bar_fontsize = 18 if len(df) < 10 else 15 #resize font if more bars
         if width:
             text = ax.text(x+width/2, y+height/2, '{:.0f}'.format(width),
                 horizontalalignment='center', verticalalignment='center',
-                color='white', fontsize=18, **hfont)
+                color='white', fontsize=bar_fontsize, **hfont)
             text.set_path_effects([PathEffects.withStroke(linewidth=2, foreground='black')])
 
     title = plt.title(f'{graphtitle}', fontsize=16, color=font_color, **hfont)
@@ -119,7 +121,7 @@ def generate_searchstrs(contrib, datemode='daysback', datevar=30, targets='triag
                     f'is:issue {datestr} involves:{contrib} repo:chromiecraft/chromiecraft',
                     f'is:pr {datestr} org:azerothcore author:{contrib}',
                     f'is:issue {datestr} author:{contrib} repo:chromiecraft/chromiecraft']
-    elif targets in ['paiddevs', 'alldevs']:
+    elif targets in ['selectdevs', 'alldevs']:
         srchstrs = [f'is:pr {datestr} org:azerothcore author:{contrib}',
                     f'is:pr {datestr} org:azerothcore reviewed-by:{contrib}']
     elif targets == 'testers': # not really useful as performance metrics, ask Temper
@@ -137,8 +139,17 @@ def scan_contribs(git, targets='triage', datemode='daysback', datevar=30):
         srchstrs = generate_searchstrs(contrib, datemode, datevar, targets)
         api_wait_search(git, len(srchstrs))
         for srch in srchstrs:
-            results = git.search_issues(srch)
-            cont_data[contrib].append(results.totalCount)
+            while True:
+                try:
+                    results = git.search_issues(srch)
+                    if results.totalCount == 1000: # workaround for API 1K search limit
+                        results.get_page(0)
+                    cont_data[contrib].append(results.totalCount)
+                    if results:
+                        break
+                except Exception as err:
+                    print(f'Error: {err}. Pausing for 20 seconds.')
+                    time.sleep(20)
         time.sleep(4)
 
     if targets == 'triage': # subtract authored CC issues from involved issues
@@ -149,7 +160,7 @@ def scan_contribs(git, targets='triage', datemode='daysback', datevar=30):
         for k, v in cont_data.items():
             cont_data[k] = [v[0] - v[1], v[1]]
 
-    if targets != 'paiddevs': # remove null contributors from all but paiddevs
+    if targets != 'selectdevs': # remove null contributors from all but selected devs
         cont_data = {k:v for k, v in cont_data.items() if sum([1 for x in v if not x]) != len(v)}
 
     totals = []
@@ -158,7 +169,7 @@ def scan_contribs(git, targets='triage', datemode='daysback', datevar=30):
     if targets == 'triage':
         print(f'AC total created: {totals[0]}, CC involved: '\
               f'{totals[1]}, PRs made: {totals[2]}.')
-    elif targets in ['paiddevs', 'alldevs']:
+    elif targets in ['selectdevs', 'alldevs']:
         print(f'PRs made: {totals[0]}, PRs reviewed: {totals[1]}')
 
     # can clear a specified team member's stats here
@@ -171,18 +182,20 @@ def scan_contribs(git, targets='triage', datemode='daysback', datevar=30):
 def main():
     # Time modes: daysback = last X days, month = activity in the listed month of this year,
     #             year = activity for that year. If not specified, defaults to daysback.
-    datemode = 'month'
+    datemode = 'year'
     # datevar: if time mode is dayback, datevar is number of days to go back. (default = 30)
     #          if time mode is month, datevar is number of month, i.e. May = 5
     #          if time mode is year, datevar is the year.
-    datevar = 11
+    datevar = 2021
     # Targets: which team or people to gather stats on.
-    # Options are 'triage', 'paiddevs', 'alldevs', 'testers'. Default is triage.
-    targets = 'paiddevs'
+    # Options are 'triage', 'selectdevs', 'alldevs', 'testers'. Default is triage.
+    targets = 'alldevs'
 
     if token := os.getenv('GITHUB_TOKEN'):
         data = scan_contribs(Github(token), targets, datemode, datevar)
         generate_stackbar(data, targets, datemode, datevar)
+    else:
+        print('GitHub auth token not found.')
 
 if __name__ == '__main__':
     main()

@@ -10,7 +10,7 @@ This is a simple utility to gather and graph statistics about team activity on G
 #### Useage
 
 The major variables are:
-- 'targets' - which team we're gathering statistics for. Has the options 'triage', 'paiddevs', 'alldevs', and 'testers'. These designations map onto one or more Github team IDs (So for example 'triage' merges members of two teams, Bug Triaging and Senior Bug Triaging.) To find a Github team ID, see https://fabian-kostadinov.github.io/2015/01/16/how-to-find-a-github-team-id/ 
+- 'targets' - which team we're gathering statistics for. Has the options 'triage', 'selectdevs', 'alldevs', and 'testers'. These designations map onto one or more Github team IDs except for 'selectdevs' which is intended to allowed custom groupings. (So for example 'triage' merges members of two teams, Bug Triaging and Senior Bug Triaging.) To find a Github team ID, see https://fabian-kostadinov.github.io/2015/01/16/how-to-find-a-github-team-id/ 
 - 'datemode' - the time period we're looking at. Options are 'daysback' (last X days from today), 'month', or 'year'.
 
 #### Other Notes
@@ -24,9 +24,9 @@ Alldevs/Daysback/7:
 
 ![Alldevs/Daysback/7](AC%20All%20Developers%20Activity%20For%20Last%207%20Days%20-%202021-12-11.png)
 
-Paiddevs/Month/11
+Selectdevs/Month/11
 
-![Paiddevs/Month/11](AC%20Selected%20Developers%20Activity%20For%20November%20-%202021-12-11.png)
+![Selectdevs/Month/11](AC%20Selected%20Developers%20Activity%20For%20November%20-%202021-12-11.png)
 
 Triage/Year/2021
 
