@@ -104,7 +104,9 @@ def generate_stackbar(data, targets, datemode, datevar):
 def generate_searchstrs(contrib, datemode='daysback', datevar=30, targets='triage'):
     lastdays = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
     srchstrs = []
-    curryear = time.localtime()[0]
+    curryear, currmonth = time.localtime()[0], time.localtime()[1]
+    if datemode == 'month' and currmonth < datevar: #month in previous year
+        curryear -= 1
 
     if datemode == 'daysback':
         days_before = (date.today() - timedelta(days=datevar)).isoformat()
@@ -173,8 +175,8 @@ def scan_contribs(git, targets='triage', datemode='daysback', datevar=30):
         print(f'PRs made: {totals[0]}, PRs reviewed: {totals[1]}')
 
     # can clear a specified team member's stats here
-    #if 'Azcobu' in cont_data:
-        #del cont_data['Azcobu']
+    if 'Azcobu' in cont_data:
+        del cont_data['Azcobu']
 
     print(cont_data)
     return cont_data
@@ -182,14 +184,14 @@ def scan_contribs(git, targets='triage', datemode='daysback', datevar=30):
 def main():
     # Time modes: daysback = last X days, month = activity in the listed month of this year,
     #             year = activity for that year. If not specified, defaults to daysback.
-    datemode = 'year'
+    datemode = 'month'
     # datevar: if time mode is dayback, datevar is number of days to go back. (default = 30)
     #          if time mode is month, datevar is number of month, i.e. May = 5
     #          if time mode is year, datevar is the year.
-    datevar = 2021
+    datevar = 12
     # Targets: which team or people to gather stats on.
     # Options are 'triage', 'selectdevs', 'alldevs', 'testers'. Default is triage.
-    targets = 'alldevs'
+    targets = 'triage'
 
     if token := os.getenv('GITHUB_TOKEN'):
         data = scan_contribs(Github(token), targets, datemode, datevar)
